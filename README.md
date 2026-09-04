@@ -299,7 +299,7 @@ It is a valid way to isolate data, but every launch must use the right command. 
 
 ### Does account switching affect Cursor Agent CLI?
 
-Yes in this fork. Account and environment switches sync IDE `cursorAuth/*` tokens into the macOS Keychain and refresh `~/.cursor/cli-config.json` so `cursor-agent about` matches the selected account. Restart any already-running `cursor-agent` process if it still reports the previous login.
+Yes. Account and environment switches sync IDE `cursorAuth/*` tokens into the stores Cursor Agent uses (macOS Keychain, or `~/.config/cursor/auth.json` on Linux) and refresh `~/.cursor/cli-config.json`, so `cursor-agent about` matches the selected account. Restart any already-running `cursor-agent` process if it still reports the previous login. On macOS, quit Cursor IDE before switching from the CLI so the IDE cannot overwrite those credentials mid-switch.
 
 ### Does it duplicate all my Cursor data when I switch accounts?
 

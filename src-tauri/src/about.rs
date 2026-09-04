@@ -1,7 +1,7 @@
 //! Native About panel content for Multi Cursor.
 
 pub const APP_NAME: &str = "Multi Cursor";
-pub const REPO_URL: &str = "https://github.com/Gust4Oliveira/multi-cursor";
+pub const REPO_URL: &str = "https://github.com/claudio-silva/multi-cursor";
 
 const CREDITS_INTRO: &str =
     "\nSwitch between Cursor accounts and isolated environments.\n\n© 2026 Cláudio Silva\n";
