@@ -204,6 +204,8 @@ cursor-agent about
 
 Imported tokens are the same session as the source machine; a refresh on one side can invalidate the other.
 
+On macOS, `use`, `capture`, and removing the active account refuse to run while Cursor IDE is open — quit Cursor first so it cannot rewrite Keychain / `state.vscdb` mid-switch.
+
 ## How it works
 
 Multi Cursor does not require flags or a launcher script. It makes Cursor's normal data folders match the selection, then starts Cursor as any other Mac app would.

@@ -6,6 +6,7 @@ use crate::agent_auth::{
     clear_cli_auth, read_live_agent_snapshot, sync_cli_auth_from_snapshot,
 };
 use crate::config::{save_config, Account, AppConfig, Environment, load_config};
+use crate::cursor::require_cursor_idle;
 use crate::paths::{ensure_layout, new_id, now_iso, root_dir};
 use crate::snapshot::{
     delete_snapshot, display_name_from_snapshot, email_from_snapshot, has_login_tokens,
@@ -122,6 +123,8 @@ pub fn find_account<'a>(cfg: &'a AppConfig, query: &str) -> Result<&'a Account, 
 }
 
 pub fn switch_account(query: &str) -> Result<Account, String> {
+    require_cursor_idle()?;
+
     let mut cfg = bootstrap_cli_state()?;
     let account = find_account(&cfg, query)?.clone();
     if account.pending_login {
@@ -133,13 +136,14 @@ pub fn switch_account(query: &str) -> Result<Account, String> {
         return Err("Account snapshot has no login tokens".to_string());
     }
 
-    // Persist the current live login back onto the previously active account.
+    // Persist the current live login back onto the previously active account
+    // only when the live identity still matches that account.
     if let Some(prev_id) = cfg.active.account_id.clone() {
         if prev_id != account.id {
             if let Some(prev) = cfg.accounts.iter().find(|a| a.id == prev_id) {
                 if !prev.pending_login {
                     if let Ok(live) = read_live_agent_snapshot() {
-                        if has_login_tokens(&live) {
+                        if has_login_tokens(&live) && live_matches_account(&live, prev) {
                             let _ = save_snapshot(&prev.env_id, &prev.id, &live);
                         }
                     }
@@ -152,9 +156,10 @@ pub fn switch_account(query: &str) -> Result<Account, String> {
 
     #[cfg(target_os = "macos")]
     {
-        if let Ok(db) = crate::paths::env_state_db(&account.env_id, cfg.active.env_id.as_deref()) {
+        if let Ok(db) = crate::paths::env_state_db(&account.env_id, Some(account.env_id.as_str()))
+        {
             if db.exists() || db.parent().map(|p| p.exists()).unwrap_or(false) {
-                let _ = crate::ide_auth::write_auth_keys(&db, &snap);
+                crate::ide_auth::write_auth_keys(&db, &snap)?;
             }
         }
     }
@@ -165,7 +170,16 @@ pub fn switch_account(query: &str) -> Result<Account, String> {
     Ok(account)
 }
 
+fn live_matches_account(live: &AuthSnapshot, account: &Account) -> bool {
+    match (email_from_snapshot(live), account.email.as_deref()) {
+        (Some(live_email), Some(account_email)) => live_email.eq_ignore_ascii_case(account_email),
+        _ => false,
+    }
+}
+
 pub fn capture_current(name: Option<String>) -> Result<Account, String> {
+    require_cursor_idle()?;
+
     let mut cfg = bootstrap_cli_state()?;
     let env_id = cfg
         .active
@@ -302,6 +316,9 @@ pub fn remove_account(query: &str) -> Result<Account, String> {
     let mut cfg = bootstrap_cli_state()?;
     let account = find_account(&cfg, query)?.clone();
     let was_active = cfg.active.account_id.as_deref() == Some(account.id.as_str());
+    if was_active {
+        require_cursor_idle()?;
+    }
 
     delete_snapshot(&account.env_id, &account.id)?;
     cfg.accounts.retain(|a| a.id != account.id);
