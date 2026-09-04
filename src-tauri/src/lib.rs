@@ -1,5 +1,6 @@
 mod about;
 mod auth;
+mod cli_auth;
 mod commands;
 mod copy_progress;
 mod cursor;
